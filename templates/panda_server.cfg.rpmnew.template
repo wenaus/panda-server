@@ -188,6 +188,17 @@ record_statuschange = True
 
 ##########################
 #
+# Job Metadata
+#
+
+# keep the metadata (the payload's job report) of failed jobs in the
+# metadata table; by default only finished jobs' metadata is stored
+keep_failed_job_metadata = False
+
+
+
+##########################
+#
 # JEDI
 #
 

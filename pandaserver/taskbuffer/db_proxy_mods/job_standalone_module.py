@@ -1099,8 +1099,9 @@ class JobStandaloneModule(BaseModule):
         comment = " /* DBProxy.addMetaData */"
         tmp_log = self.create_tagged_logger(comment, f"PandaID={pandaID}")
         tmp_log.debug(f"start")
-        # discard metadata for failed jobs
-        if newStatus == "failed":
+        # discard metadata for failed jobs unless the server is configured to keep it
+        # (keep_failed_job_metadata; a failed job's metadata is still capped at maxSize below)
+        if newStatus == "failed" and not getattr(panda_config, "keep_failed_job_metadata", False):
             tmp_log.debug("skip")
             return True
         sqlJ = "SELECT jobStatus FROM ATLAS_PANDA.jobsActive4 WHERE PandaID=:PandaID "
