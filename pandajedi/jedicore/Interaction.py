@@ -88,6 +88,21 @@ def dumpStdOut(sender: str, message: str) -> None:
     print(f"{str(timeNow)} {sender}: INFO    {message}")
 
 
+# wait for a killed child process
+def reap_child(pid: int) -> None:
+    # A child this process started is reaped through its multiprocessing record, which
+    # releases the record and the sentinel pipe it holds. Reaped by os.waitpid alone, the
+    # record stays among multiprocessing's children for the life of the process, and every
+    # recycle leaves two pipes open until the process runs out of file descriptors
+    for proc in multiprocessing.active_children():
+        if proc.pid == pid:
+            proc.join()
+            proc.close()
+            return
+    # not a child started here, or already reaped while listing the children
+    os.waitpid(pid, 0)
+
+
 # object class for command
 class CommandObject(object):
     # constructor
@@ -249,7 +264,7 @@ class MethodClass(object):
                     dumpStdOut(self.className, f"killing pid={child_process.pid}")
                     os.kill(child_process.pid, signal.SIGKILL)
                     dumpStdOut(self.className, f"waiting pid={child_process.pid}")
-                    os.waitpid(child_process.pid, 0)
+                    reap_child(child_process.pid)
                     dumpStdOut(self.className, f"terminated pid={child_process.pid}")
                 except Exception as e:
                     if "No child processes" not in str(e):
@@ -319,6 +334,8 @@ class CommandSendInterface(object):
         # start child process
         child_process.daemon = True
         child_process.start()
+        # the child holds its own end now; this process's copy would stay open for good
+        child_conn.close()
         if child_process.pid is None:
             # start() either sets the pid or raises, so this is unreachable. It is spelled
             # out because the pid goes on to os.kill() in MethodClass.__call__, and passing
